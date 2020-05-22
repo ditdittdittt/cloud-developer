@@ -9,12 +9,26 @@ const todosTable = process.env.TODOS_TABLE
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
 
-  console.log("EVENT:", event);
+  // TODO: Get all TODO items for a current user
+  console.log("Processing Event:", event);
 
-  const authHeader = event.headers.Authorization
-  const authSplit = authHeader.split(" ")
-  const userId = parseUserId(authSplit[1])
+  const authorization = event.headers.Authorization
+  const split = authorization.split(' ')
+  const userId = parseUserId(split[1])
+  const items = await getTodos(userId)
 
+  return {
+    statusCode: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify({
+      items
+    })
+  }
+}
+
+async function getTodos(userId: string){
   const result = await docClient.query({
     TableName : todosTable,
     IndexName: "UserIdIndex",
@@ -26,15 +40,5 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     ScanIndexForward: false
   }).promise()
 
-  const items = result.Items
-
-  return {
-    statusCode: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*'
-    },
-    body: JSON.stringify({
-      items
-    })
-  }
+  return result.Items
 }

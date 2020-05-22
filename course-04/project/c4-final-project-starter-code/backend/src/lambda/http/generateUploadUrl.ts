@@ -5,33 +5,49 @@ import 'source-map-support/register'
 
 
 const docClient = new AWS.DynamoDB.DocumentClient()
+const s3 = new AWS.S3({
+  signatureVersion: 'v4'
+})
+const bucketName = process.env.S3_BUCKET
+const urlExpiration = process.env.SIGNED_URL_EXPIRATION
+const todostable = process.env.TODOS_TABLE
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const todoId = event.pathParameters.todoId
 
-  console.log(todoId)
-  const bucket = process.env.S3_BUCKET
-  const url_exp = process.env.SIGNED_URL_EXPIRATION
-  const todosTable = process.env.TODOS_TABLE
+  // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
+  console.log("Processing Event:", event);
 
   const imageId = uuid.v4()
+  const url = getUploadUrl(imageId)
+  const imageUrl = await updateImageUrl(todoId, imageId)
 
-  const s3 = new AWS.S3({
-    signatureVersion: 'v4'
-  })
+  return {
+    statusCode: 201,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify({
+      imageUrl: imageUrl,
+      uploadUrl: url
+    })
+  }
+}
 
-  // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
-
-  const url = s3.getSignedUrl('putObject',{
-    Bucket: bucket,
+function getUploadUrl(imageId: string) {
+  return s3.getSignedUrl('putObject', {
+    Bucket: bucketName,
     Key: imageId,
-    Expires: url_exp
+    Expires: urlExpiration
   })
+}
 
-  const imageUrl = `https://${bucket}.s3.amazonaws.com/${imageId}`
+async function updateImageUrl(todoId: string, imageId: string) {
+
+  const imageUrl = `https://${bucketName}.s3.amazonaws.com/${imageId}`
 
   const updateUrlOnTodo = {
-    TableName: todosTable,
+    TableName: todostable,
     Key: { "todoId": todoId },
     UpdateExpression: "set attachmentUrl = :a",
     ExpressionAttributeValues:{
@@ -40,16 +56,9 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
     ReturnValues:"UPDATED_NEW"
   }
 
-  await docClient.update(updateUrlOnTodo).promise()
+  await docClient
+    .update(updateUrlOnTodo)
+    .promise()
 
-  return {
-    statusCode: 201,
-    headers: {
-      'Access-Control-Allow-Origin': '*'
-    },
-    body: JSON.stringify({
-      iamgeUrl: imageUrl,
-      uploadUrl: url
-    })
-  }
+  return imageUrl
 }
