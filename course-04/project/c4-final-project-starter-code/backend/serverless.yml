@@ -23,16 +23,16 @@ provider:
     USER_ID_INDEX: userId
 
   # enable AWS X-Ray Tracing
-#  tracing:
-#    lambda: true
-#    apiGateway: true
-#    iamRoleStatements:
-#      - Effect: 'Allow' # xray permissions (required)
-#        Action:
-#          - 'xray:PutTraceSegments'
-#          - 'xray:PutTelemetryRecords'
-#        Resource:
-#          - '*'
+  tracing:
+    lambda: true
+    apiGateway: true
+    iamRoleStatements:
+      - Effect: 'Allow' # xray permissions (required)
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
 
 functions:
   Auth:
