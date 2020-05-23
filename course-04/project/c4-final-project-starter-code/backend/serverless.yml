@@ -5,6 +5,9 @@ plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
 
+package:
+  individually: true
+
 provider:
   name: aws
   runtime: nodejs12.x
@@ -17,6 +20,19 @@ provider:
     AUTH_0_SECRET: btFJErpHWlEFDDd9p38FeK2grr6RpDiKnQEbTRnsShEuZLqgjhzW12vMeZuKY2Tl
     S3_BUCKET: serverless-todo-s3-yudit${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
+    USER_ID_INDEX: userId
+
+  # enable AWS X-Ray Tracing
+#  tracing:
+#    lambda: true
+#    apiGateway: true
+#    iamRoleStatements:
+#      - Effect: 'Allow' # xray permissions (required)
+#        Action:
+#          - 'xray:PutTraceSegments'
+#          - 'xray:PutTelemetryRecords'
+#        Resource:
+#          - '*'
 
 functions:
   Auth:
@@ -109,6 +125,18 @@ functions:
 resources:
   Resources:
     # TODO: Add any necessary AWS resources
+
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*''"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+
     TodosDynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
